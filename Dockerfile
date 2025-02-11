@@ -1,8 +1,13 @@
-FROM node:18-alpine AS base
+FROM node:18-bullseye-slim AS base
 
 # Install dependencies
 FROM base AS deps
-RUN apk add --no-cache libc6-compat python3 make g++ openssl1.1-compat
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
@@ -16,8 +21,10 @@ ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy"
 ENV DATABASE_TYPE="postgresql"
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Install OpenSSL in builder stage
-RUN apk add --no-cache openssl1.1-compat
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN yarn build-docker
 
@@ -26,8 +33,10 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Install OpenSSL in production stage
-RUN apk add --no-cache openssl1.1-compat
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
