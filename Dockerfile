@@ -28,11 +28,29 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Build the application
 RUN yarn build-docker
 
+# Ensure server file is created
+RUN echo "const { createServer } = require('http');\
+const { parse } = require('url');\
+const next = require('next');\
+\
+const app = next({ dev: false });\
+const handle = app.getRequestHandler();\
+\
+app.prepare().then(() => {\
+  createServer((req, res) => {\
+    const parsedUrl = parse(req.url, true);\
+    handle(req, res, parsedUrl);\
+  }).listen(process.env.PORT || 3000, (err) => {\
+    if (err) throw err;\
+    console.log('> Ready on http://localhost:' + (process.env.PORT || 3000));\
+  });\
+});" > server.js
+
 # Set runtime environment
 ENV PORT=3000
 ENV NODE_ENV=production
 
 EXPOSE 3000
 
-# Use the start-docker command specifically
-CMD ["yarn", "start-docker"]
+# Use next start directly instead of custom server
+CMD ["yarn", "next", "start"]
