@@ -1,2 +1,9 @@
 [build]
 builder = "nixpacks"
+
+[deploy]
+startCommand = "npm run start-docker"
+restartPolicyType = "on_failure"
+
+[phases.setup]
+nixPkgs = ["nodejs", "npm", "python3", "gcc", "g++"]
