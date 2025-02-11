@@ -12,13 +12,15 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN cp .env.docker .env
+ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy"
+ENV DATABASE_TYPE="postgresql"
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN yarn build-docker
 
 # Production image
 FROM base AS runner
 WORKDIR /app
-ENV NODE_ENV production
+ENV NODE_ENV=production
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
@@ -26,7 +28,7 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/prisma ./prisma
 
-ENV PORT 3000
+ENV PORT=3000
 EXPOSE 3000
 
 CMD ["yarn", "start-docker"]
