@@ -1,53 +1,38 @@
-FROM node:18-bullseye-slim AS base
+FROM node:18-bullseye-slim
+
+WORKDIR /app
 
 # Install dependencies
-FROM base AS deps
 RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
     openssl \
+    git \
     && rm -rf /var/lib/apt/lists/*
-WORKDIR /app
+
+# Copy package files first for better caching
 COPY package.json yarn.lock ./
+
+# Install dependencies
 RUN yarn install --frozen-lockfile
 
-# Build the application
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copy rest of the application
 COPY . .
+
+# Set build environment variables
 ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy"
 ENV DATABASE_TYPE="postgresql"
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y \
-    openssl \
-    && rm -rf /var/lib/apt/lists/*
-
+# Build the application
 RUN yarn build-docker
 
-# Production image
-FROM base AS runner
-WORKDIR /app
+# Set runtime environment
+ENV PORT=3000
 ENV NODE_ENV=production
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    openssl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy all necessary files
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/server.js ./server.js
-
-ENV PORT=3000
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+# Use the start-docker command specifically
+CMD ["yarn", "start-docker"]
