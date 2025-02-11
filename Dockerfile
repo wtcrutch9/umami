@@ -4,8 +4,8 @@ FROM node:18-alpine AS base
 FROM base AS deps
 RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
 
 # Build the application
 FROM base AS builder
@@ -13,7 +13,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN cp .env.docker .env
-RUN npm run build-docker
+RUN yarn build-docker
 
 # Production image
 FROM base AS runner
@@ -29,4 +29,4 @@ COPY --from=builder /app/prisma ./prisma
 ENV PORT 3000
 EXPOSE 3000
 
-CMD ["npm", "run", "start-docker"]
+CMD ["yarn", "start-docker"]
