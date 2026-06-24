@@ -5,9 +5,9 @@ FROM node:${NODE_IMAGE_VERSION} AS deps
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN npm install -g pnpm
-RUN echo "allow-build=*" > .npmrc && pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Rebuild the source code only when needed
 FROM node:${NODE_IMAGE_VERSION} AS builder
@@ -41,8 +41,11 @@ RUN set -x \
     && apk add --no-cache curl \
     && npm install -g pnpm
 
+# Copy pnpm-workspace.yaml for build permissions
+COPY pnpm-workspace.yaml ./
+
 # Script dependencies
-RUN echo "allow-build=*" > .npmrc && pnpm add npm-run-all dotenv chalk semver \
+RUN pnpm --allow-build='@prisma/engines' add npm-run-all dotenv chalk semver \
     prisma@${PRISMA_VERSION} \
     @prisma/client@${PRISMA_VERSION} \
     @prisma/adapter-pg@${PRISMA_VERSION}
